@@ -60,6 +60,7 @@ export function Proveedor({ children }) {
   }
 
   const scriptViejo = Boolean(datos) && datos.version < api.VERSION_SCRIPT;
+  const versionDatos = datos?.version || 1;
 
   async function enviar(accion, cuerpo, antes, mensajeOk) {
     try {
@@ -86,7 +87,7 @@ export function Proveedor({ children }) {
   }
   /** Guarda muchos movimientos en una sola llamada (importar respaldo). */
   function guardarMovs(movs, mensaje) {
-    if (scriptViejo) { avisar('Actualiza tu Apps Script para importar movimientos (ver Configuración).'); return Promise.resolve(false); }
+    if (versionDatos < 2) { avisar('Actualiza tu Apps Script para importar movimientos (ver Configuración).'); return Promise.resolve(false); }
     const antes = ref.current;
     const ids = new Set(movs.map((m) => m.id));
     poner({ ...antes, movimientos: antes.movimientos.filter((m) => !ids.has(m.id)).concat(movs) });
@@ -98,7 +99,7 @@ export function Proveedor({ children }) {
     return enviar('borrarMovimiento', { id: mov.id, fecha: mov.fecha }, antes, 'Movimiento borrado');
   }
   function guardarConfig(clave, filas, mensaje = 'Cambios guardados') {
-    if (scriptViejo && api.CLAVES_V2.includes(clave)) {
+    if (versionDatos < (api.VERSION_CLAVE[clave] || 1)) {
       avisar('Para guardar esto, actualiza tu Apps Script con el nuevo Code.gs (ver Configuración).');
       return Promise.resolve(false);
     }
@@ -109,7 +110,7 @@ export function Proveedor({ children }) {
 
   // Una foto del patrimonio por mes para la gráfica de evolución. Se actualiza sola cuando cambian los números.
   useEffect(() => {
-    if (!datos || cargando || scriptViejo || (!datos.activos.length && !datos.deudas.length && !datos.tarjetas.length)) return;
+    if (!datos || cargando || versionDatos < 2 || (!datos.activos.length && !datos.deudas.length && !datos.tarjetas.length)) return;
     const p = patrimonio(datos);
     const ym = mesActual();
     const foto = { mes: ym, activos: Math.round(p.activos), pasivos: Math.round(p.pasivos), neto: Math.round(p.neto) };
@@ -122,7 +123,7 @@ export function Proveedor({ children }) {
       guardarConfig('historialPatrimonio', datos.historialPatrimonio.filter((h) => h.mes !== ym).concat(foto).sort((a, b) => (a.mes < b.mes ? -1 : 1)), '');
     }, 2500);
     return () => clearTimeout(t);
-  }, [datos, cargando, scriptViejo]);
+  }, [datos, cargando, versionDatos]);
 
   return (
     <Ctx.Provider value={{ conexion, datos, cargando, error, pendientes, aviso, scriptViejo, cargar, conectar, desconectar, guardarMov, guardarMovs, borrarMov, guardarConfig, avisar }}>

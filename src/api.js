@@ -27,6 +27,7 @@ export function normalizar(d) {
     })),
     metas: d.metas || [],
     tarjetas: d.tarjetas || [],
+    mesesTarjeta: d.mesesTarjeta || [],
     deudas: d.deudas || [],
     activos: d.activos || [],
     historialPatrimonio: d.historialPatrimonio || [],
@@ -36,9 +37,9 @@ export function normalizar(d) {
   };
 }
 
-/** Claves de configuración que solo existen desde la versión 2 del script. */
-export const CLAVES_V2 = ['tarjetas', 'deudas', 'activos', 'historialPatrimonio', 'preferencias'];
-export const VERSION_SCRIPT = 2;
+/** Versión mínima del script que necesita cada pestaña de configuración nueva. */
+export const VERSION_CLAVE = { tarjetas: 2, deudas: 2, activos: 2, historialPatrimonio: 2, preferencias: 2, mesesTarjeta: 3 };
+export const VERSION_SCRIPT = 3;
 
 export async function llamar(accion, datos, conexion = leerConexion()) {
   if (!conexion) throw new Error('Falta conectar tu hoja.');
@@ -79,6 +80,7 @@ export async function enviarCola() {
 function demo(accion, datos) {
   const d = leer(K.demo) || sembrar();
   if (!d.version) Object.assign(d, sembrarV2(d)); // datos de ejemplo creados con la versión anterior
+  if (!d.mesesTarjeta) Object.assign(d, { version: VERSION_SCRIPT, mesesTarjeta: sembrarMeses() });
   if (accion === 'cargar') { aplicarFijos(d); escribir(K.demo, d); return structuredClone(d); }
   if (accion === 'guardarMovimiento') d.movimientos = d.movimientos.filter((m) => m.id !== datos.mov.id).concat(datos.mov);
   else if (accion === 'guardarMovimientos') {
@@ -154,14 +156,23 @@ function sembrar() {
   return { categorias, formasPago, metas, urlHoja: '', ...sembrarV2({ movimientos, recurrentes }) };
 }
 
+/** Compras a meses de ejemplo en la tarjeta t1. */
+function sembrarMeses() {
+  return [
+    { id: 'c1', tarjeta: 't1', descripcion: 'Laptop', monto: 18000, plazo: 12, pagadosInicio: 4, fechaRegistro: `${moverMes(mesActual(), -1)}-20`, tasa: 0, pagoMensual: 1500 },
+    { id: 'c2', tarjeta: 't1', descripcion: 'Refrigerador', monto: 9000, plazo: 6, pagadosInicio: 0, fechaRegistro: `${moverMes(mesActual(), -1)}-25`, tasa: 24, pagoMensual: 1607 },
+  ];
+}
+
 /** Tarjetas, deudas, patrimonio y preferencias de ejemplo. */
 function sembrarV2(d) {
   const hace = (n) => moverMes(mesActual(), -n);
   const historialPatrimonio = [3, 2, 1].map((n, i) => ({ mes: hace(n), activos: 168000 + i * 6500, pasivos: 64000 - i * 3800, neto: 104000 + i * 10300 }));
   return {
-    version: 2,
+    version: VERSION_SCRIPT,
+    mesesTarjeta: sembrarMeses(),
     recurrentes: (d.recurrentes || []).map((r) => ({ frecuencia: 'Mensual', mes: 1, automatico: true, ...r })),
-    tarjetas: [{ id: 't1', nombre: 'BBVA Azul', banco: 'BBVA', formaPago: 'Tarjeta de crédito', limite: 40000, saldo: 6200, fechaSaldo: `${hace(1)}-20`, diaCorte: 20, diaPago: 10 }],
+    tarjetas: [{ id: 't1', nombre: 'BBVA Azul', banco: 'BBVA', formaPago: 'Tarjeta de crédito', limite: 60000, saldo: 26000, fechaSaldo: `${hace(1)}-20`, diaCorte: 20, diaPago: 10 }],
     deudas: [{ id: 'd1', nombre: 'Crédito automotriz', acreedor: 'Banorte', saldo: 58000, fechaSaldo: `${hace(2)}-01`, pagoMensual: 4200, tasa: 13.5, diaPago: 12, fechaFin: `${new Date().getFullYear() + 1}-12-12` }],
     activos: [
       { id: 'a1', nombre: 'Cuenta de nómina', tipo: 'Cuenta bancaria', valor: 24500, fecha: hoyISO() },

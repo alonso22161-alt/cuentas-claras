@@ -4,9 +4,9 @@ import { useDatos, preferencia } from '../store.jsx';
 import { BotonConfirmar, Boton, Campo, Panel, claseEntrada } from '../ui.jsx';
 import { MONEDAS, descargarCSV, hoyISO } from '../utils.js';
 import { descargar, descargarExcel } from '../excel.js';
-import { VERSION_SCRIPT, normalizar } from '../api.js';
+import { VERSION_CLAVE, VERSION_SCRIPT, normalizar } from '../api.js';
 
-const CLAVES_CONFIG = ['categorias', 'formasPago', 'recurrentes', 'metas', 'tarjetas', 'deudas', 'activos', 'historialPatrimonio', 'preferencias'];
+const CLAVES_CONFIG = ['categorias', 'formasPago', 'recurrentes', 'metas', 'tarjetas', 'mesesTarjeta', 'deudas', 'activos', 'historialPatrimonio', 'preferencias'];
 
 function ListaEditable({ titulo, ayuda, filas, opciones, campoOpcion, onGuardar, extra, conSub }) {
   const [nombre, setNombre] = useState('');
@@ -112,7 +112,7 @@ export default function Ajustes() {
     const d = respaldo.datos;
     setRespaldo(null);
     for (const clave of CLAVES_CONFIG) {
-      if (scriptViejo && ['tarjetas', 'deudas', 'activos', 'historialPatrimonio', 'preferencias'].includes(clave)) continue;
+      if (datos.version < (VERSION_CLAVE[clave] || 1)) continue;
       await guardarConfig(clave, d[clave], '');
     }
     const nuevos = d.movimientos.filter((m) => /^\d{4}-\d{2}-\d{2}$/.test(m.fecha) && Number(m.monto) > 0);
@@ -179,7 +179,7 @@ export default function Ajustes() {
         {!conexion?.demo && (
           <Panel titulo="Tu Apps Script" subtitulo={scriptViejo ? `Versión ${datos.version}: falta actualizar` : `Versión ${datos.version}: al día`}>
             <div className={`text-xs leading-relaxed rounded-[10px] p-3 ${scriptViejo ? 'bg-aviso-suave' : 'bg-hundido'}`} style={scriptViejo ? { color: 'var(--aviso)' } : undefined}>
-              <p className="font-semibold mb-1">{scriptViejo ? 'Para usar tarjetas, deudas, patrimonio y preferencias:' : 'Si algún día cambia Code.gs:'}</p>
+              <p className="font-semibold mb-1">{scriptViejo ? 'Para usar todas las funciones (tarjetas, compras a meses, deudas, patrimonio):' : 'Si algún día cambia Code.gs:'}</p>
               <ol className="list-decimal pl-4 space-y-0.5">
                 <li>Abre tu hoja y entra a Extensiones &gt; Apps Script.</li>
                 <li>Borra todo y pega el nuevo contenido de apps-script/Code.gs del proyecto.</li>

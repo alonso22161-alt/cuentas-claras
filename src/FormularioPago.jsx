@@ -26,7 +26,7 @@ export default function FormularioPago({ clase, item, mov, onListo }) {
   const { datos, guardarMov, borrarMov, guardarConfig, avisar } = useDatos();
   const editando = Boolean(mov);
   const t = TEXTOS[clase];
-  const sugerido = clase === 'tarjeta' ? estadoTarjeta(datos, item).saldo : clase === 'deuda' ? Math.min(Number(item.pagoMensual) || 0, estadoDeuda(datos, item).saldo) : 0;
+  const sugerido = clase === 'tarjeta' ? estadoTarjeta(datos, item).pagoMes : clase === 'deuda' ? Math.min(Number(item.pagoMensual) || 0, estadoDeuda(datos, item).saldo) : 0;
   const origenes = datos.formasPago.filter((f) => f.tipo !== 'Crédito' && f.nombre !== item.formaPago);
   const catsGasto = datos.categorias.filter((c) => c.tipo === 'Gasto');
   const catInicial = clase === 'deuda'
@@ -68,7 +68,7 @@ export default function FormularioPago({ clase, item, mov, onListo }) {
     <div className="space-y-4">
       <p className="text-sm text-suave">{t.ayuda}</p>
       <div className="grid grid-cols-2 gap-3">
-        <Campo etiqueta="Importe" ayuda={sugerido > 0 && !editando ? `${clase === 'tarjeta' ? 'Saldo actual' : 'Pago mensual'}: ${dinero(sugerido)}` : null}>
+        <Campo etiqueta="Importe" ayuda={sugerido > 0 && !editando ? `${clase === 'tarjeta' ? 'Pago para no generar intereses' : 'Pago mensual'}: ${dinero(sugerido)}` : null}>
           <input inputMode="decimal" autoFocus value={monto} onChange={(e) => setMonto(soloImporte(e.target.value))} placeholder="0.00" className={`${claseEntrada} cifra font-semibold`} />
         </Campo>
         <Campo etiqueta="Fecha"><input type="date" value={fecha} onChange={(e) => e.target.value && setFecha(e.target.value)} className={claseEntrada} /></Campo>

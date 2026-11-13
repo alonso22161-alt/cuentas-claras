@@ -36,7 +36,7 @@ Tus datos no se borran y la URL no cambia. Solo hay que poner el script nuevo:
 4. **Implementar > Administrar implementaciones > lápiz > Versión: Nueva versión > Implementar**.
 5. En la app presiona **Actualizar datos** (Configuración). Las pestañas nuevas se crean solas.
 
-Mientras no lo actualices, la app sigue funcionando con tus movimientos y te muestra un aviso; solo no podrá guardar tarjetas, deudas, patrimonio ni preferencias.
+Mientras no lo actualices, la app sigue funcionando con tus movimientos y te muestra un aviso; solo no podrá guardar lo nuevo (tarjetas, compras a meses, deudas, patrimonio y preferencias). Cada vez que `Code.gs` cambie (la versión está en `const VERSION`), repite estos pasos editando la misma implementación con el lápiz; no crees una implementación nueva porque cambia la URL.
 
 ## Parte 2. Publicar la app gratis en GitHub Pages
 
@@ -93,6 +93,7 @@ En la pantalla de inicio puedes usar **Probar con datos de ejemplo** para ver to
 ## Bueno saber
 
 - **Todo está conectado:** un gasto actualiza el dashboard, presupuestos, quincenas y reportes. Una compra con la forma de pago de una tarjeta sube su saldo.
+- **Compras a meses:** dentro de cada tarjeta registras monto, plazo, tasa (0 si es sin intereses) y pagos hechos. Los pendientes bajan solos cada fecha límite de pago y la tarjeta muestra el pago para no generar intereses.
 - **Pagos de tarjeta:** son transferencias. Bajan el saldo de la tarjeta, pero no cuentan como gasto, porque las compras ya contaron el día que las hiciste.
 - **Abonos a deudas:** bajan el saldo de la deuda. Puedes elegir si cuentan como gasto del mes. Los intereses no se suman solos; actualiza el saldo cuando tu banco te dé uno nuevo.
 - **Aportaciones a metas:** quedan en el historial de la meta y cuentan como ahorro del mes, no como consumo.

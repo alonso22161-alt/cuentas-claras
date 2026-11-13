@@ -78,6 +78,34 @@ export function sumarDias(fecha, n) {
    Saldo = saldo registrado + compras con su forma de pago − pagos y devoluciones, desde la fecha del saldo.
    Un pago de tarjeta es una transferencia: las compras ya contaron como gasto el día que se hicieron. */
 
+/** Mensualidad de una compra a meses. Con tasa 0 es "meses sin intereses". */
+export function mensualidad(monto, tasaAnual, plazo) {
+  const n = Math.max(1, Number(plazo) || 1), r = (Number(tasaAnual) || 0) / 100 / 12, m = Number(monto) || 0;
+  return Math.round((r > 0 ? (m * r) / (1 - (1 + r) ** -n) : m / n) * 100) / 100;
+}
+
+/**
+ * Estado de una compra a meses. Los pagos hechos son los que traía al registrarla más
+ * una por cada fecha límite de pago de la tarjeta que ya pasó desde entonces.
+ */
+export function estadoPlan(t, p, hoy = hoyISO()) {
+  const plazo = Math.max(1, Number(p.plazo) || 1);
+  const mensual = Number(p.pagoMensual) || mensualidad(p.monto, p.tasa, plazo);
+  const registro = p.fechaRegistro || hoy;
+  let vencidos = 0;
+  for (let ym = mesDe(registro), i = 0; i < 600; ym = moverMes(ym, 1), i++) {
+    const vence = fechaEnMes(ym, t.diaPago);
+    if (vence > hoy) break;
+    if (vence > registro) vencidos++;
+  }
+  const hechos = Math.min(plazo, (Number(p.pagadosInicio) || 0) + vencidos);
+  const pendientes = plazo - hechos;
+  return {
+    plan: p, plazo, mensual, hechos, pendientes, restante: mensual * pendientes, terminado: pendientes === 0,
+    total: mensual * plazo, intereses: Math.max(0, mensual * plazo - (Number(p.monto) || 0)), avance: hechos / plazo,
+  };
+}
+
 export function estadoTarjeta(datos, t) {
   const desde = t.fechaSaldo || '0000-00-00';
   const conTarjeta = datos.movimientos.filter((m) => m.formaPago === t.formaPago && m.fecha >= desde && vinculo(m)?.clase !== 'tarjeta');
@@ -92,7 +120,14 @@ export function estadoTarjeta(datos, t) {
   const proximoPago = proximaFecha(t.diaPago, hoy);
   const proximoCorte = proximaFecha(t.diaCorte, hoy);
   const pagadoEsteMes = pagos.some((m) => mesDe(m.fecha) === mesDe(proximoPago) && m.fecha <= proximoPago);
+  // Compras a meses: lo que aún no vence no se paga este mes
+  const planes = (datos.mesesTarjeta || []).filter((p) => String(p.tarjeta) === String(t.id)).map((p) => estadoPlan(t, p, hoy));
+  const activos = planes.filter((x) => !x.terminado);
+  const aMeses = suma(activos, (x) => x.restante);
+  const mensualidades = suma(activos, (x) => x.mensual);
+  const pagoMes = Math.max(0, saldo - Math.max(0, aMeses - mensualidades));
   return {
+    planes, aMeses, mensualidades, pagoMes,
     saldo, bruto, limite, disponible: Math.max(0, limite - saldo), utilizacion: limite > 0 ? saldo / limite : 0,
     cargos, pagos, proximoPago, proximoCorte, diasParaPago: diasEntre(hoy, proximoPago), pagadoEsteMes,
     compras: conTarjeta.filter((m) => m.tipo === 'Gasto').sort((a, b) => (a.fecha < b.fecha ? 1 : -1)),
@@ -175,7 +210,7 @@ export function compromisos(datos, ym) {
     const fecha = fechaEnMes(ym, t.diaPago);
     const delMes = e.pagos.filter((m) => mesDe(m.fecha) === ym);
     const pagado = delMes.length > 0;
-    if (e.saldo > 0 || pagado) lista.push({ clave: `tj-${t.id}-${ym}`, fecha, nombre: t.nombre, monto: pagado ? suma(delMes, (m) => m.monto) : e.saldo, clase: 'Tarjeta', pagado, ref: t });
+    if (e.saldo > 0 || pagado) lista.push({ clave: `tj-${t.id}-${ym}`, fecha, nombre: t.nombre, monto: pagado ? suma(delMes, (m) => m.monto) : e.pagoMes, clase: 'Tarjeta', pagado, ref: t });
   });
   datos.deudas.forEach((d) => {
     const e = estadoDeuda(datos, d);

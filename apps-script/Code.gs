@@ -14,7 +14,7 @@
 const CLAVE = 'CAMBIA-ESTA-CLAVE';
 
 // La app compara este número para saber si el script ya tiene las funciones nuevas.
-const VERSION = 2;
+const VERSION = 3;
 
 const MESES = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
 const ENC_MES = ['ID', 'Fecha', 'Tipo', 'Categoría', 'Descripción', 'Monto', 'Forma de pago', 'Notas', 'Registrado', 'Subcategoría'];
@@ -83,6 +83,13 @@ const CONFIG = {
     texto: ['fechaSaldo', 'fechaFin'],
     inicial: [],
   },
+  mesesTarjeta: {
+    hoja: 'Compras a meses',
+    enc: ['ID', 'Tarjeta (ID)', 'Descripción', 'Monto', 'Plazo (meses)', 'Pagos hechos al registrar', 'Fecha de registro', 'Tasa anual %', 'Pago mensual'],
+    campos: ['id', 'tarjeta', 'descripcion', 'monto', 'plazo', 'pagadosInicio', 'fechaRegistro', 'tasa', 'pagoMensual'],
+    texto: ['tarjeta', 'fechaRegistro'],
+    inicial: [],
+  },
   activos: {
     hoja: 'Patrimonio',
     enc: ['ID', 'Nombre', 'Tipo', 'Valor', 'Actualizado'],
@@ -107,7 +114,7 @@ const CONFIG = {
 };
 
 const CAMPOS_NUMERO = ['presupuesto', 'monto', 'dia', 'meta', 'ahorrado', 'mes', 'limite', 'saldo', 'diaCorte', 'diaPago',
-  'pagoMensual', 'tasa', 'valor', 'activos', 'pasivos', 'neto'];
+  'pagoMensual', 'tasa', 'valor', 'activos', 'pasivos', 'neto', 'plazo', 'pagadosInicio'];
 const CAMPOS_SINO = ['activo', 'automatico'];
 
 /* ───────────── Menú e instalación ───────────── */

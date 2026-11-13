@@ -142,7 +142,7 @@ export default function App() {
 
           {scriptViejo && (
             <div className="mb-4 rounded-[10px] border px-4 py-3 text-sm bg-aviso-suave" style={{ borderColor: 'color-mix(in srgb, var(--aviso) 30%, transparent)', color: 'var(--aviso)' }}>
-              Tu Apps Script es de la versión anterior. Tus movimientos funcionan, pero para guardar tarjetas, deudas, patrimonio y preferencias, actualízalo.{' '}
+              Hay una versión nueva de tu Apps Script. Tus movimientos funcionan, pero para guardar {datos.version < 2 ? 'tarjetas, deudas, patrimonio y preferencias' : 'compras a meses'} necesitas actualizarlo.{' '}
               <button type="button" className="font-semibold underline" onClick={() => irA('ajustes')}>Ver cómo</button>
             </div>
           )}

@@ -157,7 +157,9 @@ function consejosDeCredito(datos) {
     const e = estadoTarjeta(datos, t);
     if (e.saldo > 0 && !e.pagadoEsteMes && e.diasParaPago <= 5) {
       lista.push({ nivel: 'alerta', titulo: `Paga ${t.nombre} ${e.diasParaPago === 0 ? 'hoy' : e.diasParaPago === 1 ? 'mañana' : `en ${e.diasParaPago} días`}`,
-        texto: `Tu saldo es de ${dinero0(e.saldo)}. Pagar el total antes de la fecha límite evita intereses.` });
+        texto: e.aMeses > 0
+          ? `Para no generar intereses paga ${dinero0(e.pagoMes)} (incluye ${dinero0(e.mensualidades)} de mensualidades a meses). Tu saldo total es de ${dinero0(e.saldo)}.`
+          : `Tu saldo es de ${dinero0(e.saldo)}. Pagar el total antes de la fecha límite evita intereses.` });
     }
     if (e.utilizacion >= 0.7) {
       lista.push({ nivel: 'alerta', titulo: `${t.nombre} está al ${pct(e.utilizacion)} de su límite`,
