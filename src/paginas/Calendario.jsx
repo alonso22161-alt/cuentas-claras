@@ -16,12 +16,12 @@ export function AccionCompromiso({ c }) {
   const [pagando, setPagando] = useState(false);
   if (c.pagado) return null;
   if (c.clase === 'Gasto fijo' || c.clase === 'Ingreso') {
-    return <Boton tam="sm" variante="secundario" onClick={() => guardarMov(movDeOcurrencia(c.ref), undefined, `${c.nombre}: ${c.clase === 'Ingreso' ? 'recibido' : 'pagado'}`)}>{c.clase === 'Ingreso' ? 'Recibido' : 'Pagado'}</Boton>;
+    return <Boton tam="sm" variante="secundario" onClick={() => guardarMov(movDeOcurrencia(c.ref), undefined, `${c.nombre}: ${c.clase === 'Ingreso' ? 'recibido' : 'pagado'}`)}>{c.clase === 'Ingreso' ? 'Marcar recibido' : 'Marcar pagado'}</Boton>;
   }
   const clase = c.clase === 'Tarjeta' ? 'tarjeta' : 'deuda';
   return (
     <>
-      <Boton tam="sm" variante="secundario" onClick={() => setPagando(true)}>Pagar</Boton>
+      <Boton tam="sm" variante="secundario" onClick={() => setPagando(true)}>Registrar pago</Boton>
       {pagando && <Hoja titulo={`${clase === 'tarjeta' ? 'Pago a' : 'Abono a'} ${c.nombre}`} onCerrar={() => setPagando(false)}><FormularioPago clase={clase} item={c.ref} onListo={() => setPagando(false)} /></Hoja>}
     </>
   );
@@ -33,7 +33,7 @@ export function FilaCompromiso({ c, conFecha = true }) {
       {c.pagado ? <CheckCircle2 size={18} className="text-ingreso shrink-0" /> : <Circle size={18} className="text-suave shrink-0" />}
       <span className="flex-1 min-w-0">
         <span className={`block text-sm font-semibold truncate ${c.pagado ? 'line-through decoration-suave/60 text-suave' : ''}`}>{c.nombre}</span>
-        <span className="flex items-center gap-1.5 text-xs text-suave">{conFecha && <span className="first-letter:uppercase">{etiquetaDia(c.fecha)}</span>}<Etiqueta tono={TONO_CLASE[c.clase]}>{c.clase}</Etiqueta></span>
+        <span className="flex flex-wrap items-center gap-1.5 text-xs text-suave">{conFecha && <span className="first-letter:uppercase">{etiquetaDia(c.fecha)}</span>}<Etiqueta tono={TONO_CLASE[c.clase]}>{c.clase}</Etiqueta>{c.pagado ? <Etiqueta tono='ingreso'>{c.clase === 'Ingreso' ? 'Recibido' : 'Pagado'}</Etiqueta> : c.fecha < hoyISO() ? <Etiqueta tono='gasto'>Vencido</Etiqueta> : <Etiqueta tono='aviso'>Pendiente</Etiqueta>}</span>
       </span>
       <span className="cifra font-bold text-sm shrink-0" style={c.clase === 'Ingreso' ? { color: 'var(--ingreso)' } : undefined}>{dinero0(c.monto)}</span>
       <AccionCompromiso c={c} />

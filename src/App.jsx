@@ -29,6 +29,7 @@ import Ajustes from './paginas/Ajustes.jsx';
 // `mes: true` muestra el selector de mes arriba y la página recibe el mes elegido.
 const SECCIONES = [
   { grupo: 'General', id: 'dashboard', nombre: 'Dashboard', titulo: 'Resumen financiero', Icono: LayoutDashboard, Pagina: Dashboard, mes: true },
+  { grupo: 'General', id: 'quincenas', nombre: 'Quincenas', titulo: 'Planeación por quincena', Icono: CalendarRange, Pagina: Quincenas, mes: true, futuro: true },
   { grupo: 'General', id: 'movimientos', nombre: 'Movimientos', Icono: ArrowUpDown, Pagina: Movimientos, mes: true },
   { grupo: 'General', id: 'ingresos', nombre: 'Ingresos', Icono: TrendingUp, Pagina: Ingresos, mes: true },
   { grupo: 'General', id: 'gastos', nombre: 'Gastos', Icono: TrendingDown, Pagina: Gastos, mes: true },
@@ -37,7 +38,6 @@ const SECCIONES = [
   { grupo: 'Planeación', id: 'metas', nombre: 'Metas de ahorro', Icono: Target, Pagina: Metas },
   { grupo: 'Control avanzado', id: 'tarjetas', nombre: 'Tarjetas de crédito', Icono: CreditCard, Pagina: Tarjetas },
   { grupo: 'Control avanzado', id: 'deudas', nombre: 'Deudas', titulo: 'Deudas y créditos', Icono: Landmark, Pagina: Deudas },
-  { grupo: 'Control avanzado', id: 'quincenas', nombre: 'Quincenas', titulo: 'Planeación por quincena', Icono: CalendarRange, Pagina: Quincenas, mes: true, futuro: true },
   { grupo: 'Control avanzado', id: 'proyecciones', nombre: 'Proyecciones', titulo: 'Proyección financiera', Icono: LineChart, Pagina: Proyecciones },
   { grupo: 'Control avanzado', id: 'calendario', nombre: 'Calendario de pagos', Icono: CalendarDays, Pagina: Calendario, mes: true, futuro: true },
   { grupo: 'Control avanzado', id: 'patrimonio', nombre: 'Patrimonio', titulo: 'Patrimonio personal', Icono: Gem, Pagina: Patrimonio },
