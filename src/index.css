@@ -1,0 +1,53 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --fondo: #EEF3F0;
+  --panel: #FFFFFF;
+  --hundido: #E3EBE7;
+  --tinta: #12302F;
+  --suave: #577170;
+  --linea: #D3DEDA;
+  --marca: #0F4C4A;
+  --sobremarca: #FFFFFF;
+  --ingreso: #17805A;
+  --gasto: #B3264E;
+  --aviso: #A96B0B;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --fondo: #0B1C1C;
+    --panel: #122929;
+    --hundido: #0F2323;
+    --tinta: #E4EEEB;
+    --suave: #92AAA6;
+    --linea: #234040;
+    --marca: #63CDB8;
+    --sobremarca: #062221;
+    --ingreso: #55C795;
+    --gasto: #F27C9E;
+    --aviso: #E9B356;
+    color-scheme: dark;
+  }
+}
+
+html, body, #root { height: 100%; }
+body {
+  margin: 0;
+  background: var(--fondo);
+  color: var(--tinta);
+  font-family: "Instrument Sans", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior-y: none;
+}
+.cifra { font-family: "Bricolage Grotesque", system-ui, sans-serif; font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
+:focus-visible { outline: 2px solid var(--marca); outline-offset: 2px; }
+input, select, textarea { font: inherit; color: inherit; }
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.sin-barra { scrollbar-width: none; }
+.sin-barra::-webkit-scrollbar { display: none; }
+@media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
