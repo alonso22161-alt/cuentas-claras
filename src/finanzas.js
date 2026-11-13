@@ -234,21 +234,46 @@ export function proximosPagos(datos, n = 10) {
 
 /* ───────────── Quincenas ───────────── */
 
+/** El sueldo quincenal esperado: sus dos pagos del mes abren la primera y la segunda quincena. */
+export function sueldoQuincenal(datos) {
+  const lista = datos.recurrentes.filter((f) => f.activo && f.tipo === 'Ingreso' && f.frecuencia === 'Quincenal');
+  return lista.find((f) => /sueldo|n[oó]mina|salario/i.test(`${f.descripcion} ${f.categoria}`)) || lista[0] || null;
+}
+
+/**
+ * Periodo de gasto de cada quincena: empieza el día en que marcaste recibido el sueldo y
+ * termina cuando marcas el siguiente. Si un mes pasado nunca se confirmó, se usa el 1 y el 16.
+ */
+export function periodosQuincena(datos, ym) {
+  const s = sueldoQuincenal(datos);
+  if (!s) return null;
+  const fechas = new Map(datos.movimientos.map((m) => [m.id, m.fecha]));
+  const inicio = (y, n) => fechas.get(`FIJO-${s.id}-${y}${n === 2 ? '-2' : ''}`) || (y < mesActual() ? `${y}-${n === 2 ? '16' : '01'}` : null);
+  const q1 = inicio(ym, 1), q2 = inicio(ym, 2), siguiente = inicio(moverMes(ym, 1), 1);
+  return { sueldo: s, periodos: [{ desde: q1, hasta: q2 || siguiente }, { desde: q2, hasta: siguiente }] };
+}
+
 export function quincenas(datos, ym) {
   const r = resumenMes(datos, ym);
   const todos = compromisos(datos, ym);
+  const p = periodosQuincena(datos, ym);
   return [
     { nombre: 'Primera quincena', rango: 'Del 1 al 15', dentro: (f) => Number(f.slice(8)) <= 15 },
     { nombre: 'Segunda quincena', rango: `Del 16 al ${diasDelMes(ym)}`, dentro: (f) => Number(f.slice(8)) > 15 },
-  ].map((q) => {
-    const movs = r.movs.filter((m) => q.dentro(m.fecha));
+  ].map((q, i) => {
+    // Fijos por su fecha; lo demás por el periodo que abrió el sueldo (si tienes sueldo quincenal)
+    const periodo = p?.periodos[i];
+    const enPeriodo = (m) => Boolean(periodo?.desde) && m.fecha >= periodo.desde && (!periodo.hasta || m.fecha < periodo.hasta);
+    const movs = p
+      ? [...r.movs.filter((m) => esFijo(m) && q.dentro(m.fecha)), ...datos.movimientos.filter((m) => !esFijo(m) && enPeriodo(m))]
+      : r.movs.filter((m) => q.dentro(m.fecha));
     const ingresos = suma(movs.filter((m) => m.tipo === 'Ingreso'), (m) => m.monto);
     const gastos = suma(movs.filter((m) => m.tipo === 'Gasto'), (m) => m.monto);
     const lista = todos.filter((c) => q.dentro(c.fecha));
     // Lo pagado ya está en los gastos. Las tarjetas no se restan: sus compras ya contaron como gasto.
     const pendiente = suma(lista.filter((c) => !c.pagado && c.clase !== 'Tarjeta'), (c) => c.monto);
     const esperado = suma(estadoFijos(datos, ym, 'Ingreso').filter((o) => !o.pagado && q.dentro(o.fecha)), (o) => o.fijo.monto);
-    return { ...q, movs, ingresos, gastos, balance: ingresos - gastos, compromisos: lista, pendiente, esperado, disponible: ingresos + esperado - gastos - pendiente };
+    return { ...q, periodo: p ? periodo : null, sueldo: p?.sueldo, movs, ingresos, gastos, balance: ingresos - gastos, compromisos: lista, pendiente, esperado, disponible: ingresos + esperado - gastos - pendiente };
   });
 }
 

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useDatos } from './store.jsx';
 import { BotonConfirmar, Boton, Campo, claseEntrada, soloImporte } from './ui.jsx';
-import { MESES, nuevoId } from './utils.js';
+import { MESES, hoyISO, nuevoId } from './utils.js';
 import { FRECUENCIAS } from './finanzas.js';
 
 const nuevo = (datos, tipo) => ({
@@ -69,8 +69,11 @@ export default function FormularioFijo({ fijo, tipo = 'Gasto', onListo }) {
   );
 }
 
-/** Marca como pagado (o recibido) un fijo: crea su movimiento con el ID de esa fecha, así nunca se duplica. */
+/**
+ * Marca como pagado (o recibido) un fijo: crea su movimiento con el ID de esa fecha, así nunca se duplica.
+ * Los ingresos quedan con la fecha en que se confirman: el sueldo abre la quincena ese día.
+ */
 export const movDeOcurrencia = (o) => ({
-  id: o.id, fecha: o.fecha, tipo: o.fijo.tipo, categoria: o.fijo.categoria, subcategoria: '', descripcion: o.fijo.descripcion,
+  id: o.id, fecha: o.fijo.tipo === 'Ingreso' ? hoyISO() : o.fecha, tipo: o.fijo.tipo, categoria: o.fijo.categoria, subcategoria: '', descripcion: o.fijo.descripcion,
   monto: o.fijo.monto, formaPago: o.fijo.formaPago, notas: o.fijo.tipo === 'Ingreso' ? 'Ingreso fijo' : 'Gasto fijo',
 });
