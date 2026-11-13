@@ -6,7 +6,8 @@ import { FRECUENCIAS } from './finanzas.js';
 
 const nuevo = (datos, tipo) => ({
   id: '', descripcion: '', monto: '', tipo, categoria: '', formaPago: datos.formasPago[0]?.nombre || '',
-  dia: 1, activo: true, frecuencia: 'Mensual', mes: new Date().getMonth() + 1, automatico: tipo === 'Gasto',
+  // Manual por defecto: nada se registra solo sin que el usuario lo decida
+  dia: 1, activo: true, frecuencia: 'Mensual', mes: new Date().getMonth() + 1, automatico: false,
 });
 
 /** Alta y edición de gastos fijos e ingresos esperados (ambos viven en la pestaña "Gastos fijos"). */
