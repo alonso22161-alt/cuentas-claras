@@ -20,6 +20,13 @@ export function vinculo(mov) {
 const vinculados = (datos, clase, id) => datos.movimientos.filter((m) => { const v = vinculo(m); return v && v.clase === clase && v.id === String(id); });
 export const esFijo = (m) => String(m.id).startsWith('FIJO-');
 
+/** Fecha de vencimiento de un movimiento fijo según su ID (FIJO-<id>-<aaaa-mm>[-n]); si no se puede saber, su fecha. */
+export function vencimientoFijo(datos, m) {
+  const x = /^FIJO-(.+)-(\d{4}-\d{2})(?:-(\d+))?$/.exec(String(m.id));
+  const f = x && datos.recurrentes.find((r) => String(r.id) === x[1]);
+  return (f && ocurrencias(f, x[2])[(Number(x[3]) || 1) - 1]?.fecha) || m.fecha;
+}
+
 /* ───────────── Gastos e ingresos fijos ───────────── */
 
 export const equivalenteMensual = (f) => (Number(f.monto) || 0) * (POR_MES[f.frecuencia] ?? 1);
@@ -257,6 +264,8 @@ export function quincenas(datos, ym) {
   const r = resumenMes(datos, ym);
   const todos = compromisos(datos, ym);
   const p = periodosQuincena(datos, ym);
+  // Los fijos van en la quincena de su vencimiento, aunque se hayan pagado otro día
+  const fijosMes = datos.movimientos.filter(esFijo).map((m) => ({ m, vence: vencimientoFijo(datos, m) })).filter((x) => mesDe(x.vence) === ym);
   return [
     { nombre: 'Primera quincena', rango: 'Del 1 al 15', dentro: (f) => Number(f.slice(8)) <= 15 },
     { nombre: 'Segunda quincena', rango: `Del 16 al ${diasDelMes(ym)}`, dentro: (f) => Number(f.slice(8)) > 15 },
@@ -265,7 +274,7 @@ export function quincenas(datos, ym) {
     const periodo = p?.periodos[i];
     const enPeriodo = (m) => Boolean(periodo?.desde) && m.fecha >= periodo.desde && (!periodo.hasta || m.fecha < periodo.hasta);
     const movs = p
-      ? [...r.movs.filter((m) => esFijo(m) && q.dentro(m.fecha)), ...datos.movimientos.filter((m) => !esFijo(m) && enPeriodo(m))]
+      ? [...fijosMes.filter((x) => q.dentro(x.vence)).map((x) => x.m), ...datos.movimientos.filter((m) => !esFijo(m) && enPeriodo(m))]
       : r.movs.filter((m) => q.dentro(m.fecha));
     const ingresos = suma(movs.filter((m) => m.tipo === 'Ingreso'), (m) => m.monto);
     const gastos = suma(movs.filter((m) => m.tipo === 'Gasto'), (m) => m.monto);
