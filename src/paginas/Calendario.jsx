@@ -27,7 +27,7 @@ export function AccionCompromiso({ c }) {
   );
 }
 
-export function FilaCompromiso({ c, conFecha = true }) {
+export function FilaCompromiso({ c, conFecha = true, colorear = false }) {
   return (
     <li className="flex items-center gap-3 py-2.5">
       {c.pagado ? <CheckCircle2 size={18} className="text-ingreso shrink-0" /> : <Circle size={18} className="text-suave shrink-0" />}
@@ -35,7 +35,7 @@ export function FilaCompromiso({ c, conFecha = true }) {
         <span className={`block text-sm font-semibold truncate ${c.pagado ? 'line-through decoration-suave/60 text-suave' : ''}`}>{c.nombre}</span>
         <span className="flex flex-wrap items-center gap-1.5 text-xs text-suave">{conFecha && <span className="first-letter:uppercase">{etiquetaDia(c.fecha)}</span>}<Etiqueta tono={TONO_CLASE[c.clase]}>{c.clase}</Etiqueta>{c.pagado ? <Etiqueta tono='ingreso'>{c.clase === 'Ingreso' ? 'Recibido' : 'Pagado'}</Etiqueta> : c.fecha < hoyISO() ? <Etiqueta tono='gasto'>Vencido</Etiqueta> : <Etiqueta tono='aviso'>Pendiente</Etiqueta>}</span>
       </span>
-      <span className="cifra font-bold text-sm shrink-0" style={c.clase === 'Ingreso' ? { color: 'var(--ingreso)' } : undefined}>{dinero0(c.monto)}</span>
+      <span className="cifra font-bold text-sm shrink-0" style={c.clase === 'Ingreso' ? { color: 'var(--ingreso)' } : colorear ? { color: 'var(--gasto)' } : undefined}>{dinero0(c.monto)}</span>
       <AccionCompromiso c={c} />
     </li>
   );

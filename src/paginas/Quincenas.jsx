@@ -31,7 +31,7 @@ export default function Quincenas({ mes }) {
             </div>
             <h3 className="text-xs font-bold mt-5 mb-1">Compromisos del periodo</h3>
             {q.compromisos.length === 0 ? <p className="text-sm text-suave py-2">Sin compromisos programados.</p>
-              : <ul className="divide-y divide-linea">{q.compromisos.map((c) => <FilaCompromiso key={c.clave} c={c} />)}</ul>}
+              : <ul className="divide-y divide-linea">{q.compromisos.map((c) => <FilaCompromiso key={c.clave} c={c} colorear />)}</ul>}
             <h3 className="text-xs font-bold mt-5 mb-2">Movimientos ({q.movs.length})</h3>
             <ListaMovs movs={[...q.movs].sort((a, b) => (a.fecha < b.fecha ? 1 : -1))} vacio="Sin movimientos en este periodo." />
           </Panel>
