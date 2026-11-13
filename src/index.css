@@ -2,35 +2,74 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Colores de MiControl. Claro por defecto; oscuro si el sistema lo pide o si se elige en Configuración. */
 :root {
-  --fondo: #EEF3F0;
+  --fondo: #F5F6F8;
   --panel: #FFFFFF;
-  --hundido: #E3EBE7;
-  --tinta: #12302F;
-  --suave: #577170;
-  --linea: #D3DEDA;
-  --marca: #0F4C4A;
+  --hundido: #F2F4F7;
+  --tinta: #202532;
+  --suave: #6E7787;
+  --linea: #E8EBEF;
+  --marca: #C94F5B;
+  --marca-fuerte: #B94250;
+  --marca-suave: #FFF0F1;
   --sobremarca: #FFFFFF;
-  --ingreso: #17805A;
-  --gasto: #B3264E;
-  --aviso: #A96B0B;
+  --ingreso: #159A72;
+  --ingreso-suave: #E9F8F2;
+  --gasto: #C94F5B;
+  --aviso: #A86A12;
+  --aviso-suave: #FFF7E8;
+  --nav: #202633;
+  --nav-activo: #343D4E;
+  --nav-tinta: #AEB8C8;
+  --sombra: 0 8px 28px rgba(26, 35, 50, 0.055);
   color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {
-  :root {
-    --fondo: #0B1C1C;
-    --panel: #122929;
-    --hundido: #0F2323;
-    --tinta: #E4EEEB;
-    --suave: #92AAA6;
-    --linea: #234040;
-    --marca: #63CDB8;
-    --sobremarca: #062221;
-    --ingreso: #55C795;
-    --gasto: #F27C9E;
-    --aviso: #E9B356;
+  :root:not([data-tema="claro"]) {
+    --fondo: #12151C;
+    --panel: #1A1E27;
+    --hundido: #232834;
+    --tinta: #E7EAF0;
+    --suave: #9AA3B2;
+    --linea: #2A303C;
+    --marca: #E0727D;
+    --marca-fuerte: #EA8892;
+    --marca-suave: #3A2328;
+    --sobremarca: #1A0E10;
+    --ingreso: #3CC497;
+    --ingreso-suave: #193229;
+    --gasto: #EF7D88;
+    --aviso: #E3B061;
+    --aviso-suave: #352B1A;
+    --nav: #0E1117;
+    --nav-activo: #262C38;
+    --nav-tinta: #9AA4B5;
+    --sombra: 0 8px 28px rgba(0, 0, 0, 0.25);
     color-scheme: dark;
   }
+}
+:root[data-tema="oscuro"] {
+  --fondo: #12151C;
+  --panel: #1A1E27;
+  --hundido: #232834;
+  --tinta: #E7EAF0;
+  --suave: #9AA3B2;
+  --linea: #2A303C;
+  --marca: #E0727D;
+  --marca-fuerte: #EA8892;
+  --marca-suave: #3A2328;
+  --sobremarca: #1A0E10;
+  --ingreso: #3CC497;
+  --ingreso-suave: #193229;
+  --gasto: #EF7D88;
+  --aviso: #E3B061;
+  --aviso-suave: #352B1A;
+  --nav: #0E1117;
+  --nav-activo: #262C38;
+  --nav-tinta: #9AA4B5;
+  --sombra: 0 8px 28px rgba(0, 0, 0, 0.25);
+  color-scheme: dark;
 }
 
 html, body, #root { height: 100%; }
@@ -38,16 +77,17 @@ body {
   margin: 0;
   background: var(--fondo);
   color: var(--tinta);
-  font-family: "Instrument Sans", system-ui, sans-serif;
+  font: 14px/1.45 Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
   -webkit-font-smoothing: antialiased;
   -webkit-tap-highlight-color: transparent;
   overscroll-behavior-y: none;
 }
-.cifra { font-family: "Bricolage Grotesque", system-ui, sans-serif; font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
+.cifra { font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
 :focus-visible { outline: 2px solid var(--marca); outline-offset: 2px; }
-input, select, textarea { font: inherit; color: inherit; }
+input, select, textarea, button { font: inherit; color: inherit; }
 input[type="number"]::-webkit-outer-spin-button,
 input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
 .sin-barra { scrollbar-width: none; }
 .sin-barra::-webkit-scrollbar { display: none; }
+.barra-nav { scrollbar-width: thin; scrollbar-color: #3a4352 transparent; }
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }

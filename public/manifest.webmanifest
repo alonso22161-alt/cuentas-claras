@@ -1,14 +1,14 @@
 {
-  "name": "Cuentas Claras",
-  "short_name": "Cuentas",
+  "name": "MiControl · Finanzas personales",
+  "short_name": "MiControl",
   "description": "Control de finanzas personales",
   "lang": "es-MX",
   "start_url": ".",
   "scope": ".",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#0F4C4A",
-  "theme_color": "#0F4C4A",
+  "background_color": "#F5F6F8",
+  "theme_color": "#202633",
   "icons": [
     { "src": "icono-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
     { "src": "icono-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },

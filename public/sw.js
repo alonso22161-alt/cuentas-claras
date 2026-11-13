@@ -1,6 +1,6 @@
 // Service worker: guarda la app en el teléfono para que abra rápido y sin conexión.
 // Los datos NO pasan por aquí; van directo a tu Apps Script.
-const CACHE = 'cuentas-claras-v1';
+const CACHE = 'micontrol-v2';
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(['./', './index.html'])).then(() => self.skipWaiting()));

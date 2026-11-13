@@ -1,5 +1,6 @@
 // Comunicación con tu Apps Script. Si la conexión es "demo", todo se guarda solo en este dispositivo.
-import { hoyISO, iso, mesActual, moverMes, diasDelMes, nuevoId } from './utils.js';
+import { hoyISO, mesActual, moverMes, diasDelMes, nuevoId } from './utils.js';
+import { ocurrencias } from './finanzas.js';
 
 const K = { conexion: 'cc_conexion', cache: 'cc_cache', cola: 'cc_cola', demo: 'cc_demo' };
 
@@ -14,13 +15,30 @@ export const guardarCache = (d) => escribir(K.cache, d);
 export const leerCola = () => leer(K.cola, []);
 export const encolar = (op) => escribir(K.cola, [...leerCola(), op]);
 
+/** Completa los campos que no existían en versiones anteriores, para que los datos viejos sigan funcionando. */
 export function normalizar(d) {
   if (!d) return null;
   return {
-    categorias: d.categorias || [], formasPago: d.formasPago || [], recurrentes: d.recurrentes || [],
-    metas: d.metas || [], movimientos: d.movimientos || [], urlHoja: d.urlHoja || '',
+    version: Number(d.version) || 1,
+    categorias: (d.categorias || []).map((c) => ({ ...c, subcategorias: c.subcategorias || '' })),
+    formasPago: d.formasPago || [],
+    recurrentes: (d.recurrentes || []).map((r) => ({
+      ...r, frecuencia: r.frecuencia || 'Mensual', mes: Number(r.mes) || 1, automatico: r.automatico !== false,
+    })),
+    metas: d.metas || [],
+    tarjetas: d.tarjetas || [],
+    deudas: d.deudas || [],
+    activos: d.activos || [],
+    historialPatrimonio: d.historialPatrimonio || [],
+    preferencias: d.preferencias || [],
+    movimientos: (d.movimientos || []).map((m) => ({ ...m, subcategoria: m.subcategoria || '' })),
+    urlHoja: d.urlHoja || '',
   };
 }
+
+/** Claves de configuración que solo existen desde la versión 2 del script. */
+export const CLAVES_V2 = ['tarjetas', 'deudas', 'activos', 'historialPatrimonio', 'preferencias'];
+export const VERSION_SCRIPT = 2;
 
 export async function llamar(accion, datos, conexion = leerConexion()) {
   if (!conexion) throw new Error('Falta conectar tu hoja.');
@@ -60,8 +78,13 @@ export async function enviarCola() {
 
 function demo(accion, datos) {
   const d = leer(K.demo) || sembrar();
+  if (!d.version) Object.assign(d, sembrarV2(d)); // datos de ejemplo creados con la versión anterior
   if (accion === 'cargar') { aplicarFijos(d); escribir(K.demo, d); return structuredClone(d); }
   if (accion === 'guardarMovimiento') d.movimientos = d.movimientos.filter((m) => m.id !== datos.mov.id).concat(datos.mov);
+  else if (accion === 'guardarMovimientos') {
+    const ids = new Set(datos.movs.map((m) => m.id));
+    d.movimientos = d.movimientos.filter((m) => !ids.has(m.id)).concat(datos.movs);
+  }
   else if (accion === 'borrarMovimiento') d.movimientos = d.movimientos.filter((m) => m.id !== datos.id);
   else if (accion === 'guardarConfig') d[datos.clave] = datos.filas;
   escribir(K.demo, d);
@@ -69,14 +92,15 @@ function demo(accion, datos) {
 }
 export const borrarDemo = () => localStorage.removeItem(K.demo);
 
+// Igual que aplicarRecurrentes_() en Code.gs
 function aplicarFijos(d) {
   const ym = mesActual();
-  const hoy = Number(hoyISO().slice(8));
-  d.recurrentes.filter((r) => r.activo && r.monto > 0).forEach((r) => {
-    const dia = Math.min(Math.max(1, r.dia || 1), diasDelMes(ym));
-    const id = `FIJO-${r.id}-${ym}`;
-    if (dia > hoy || d.movimientos.some((m) => m.id === id)) return;
-    d.movimientos.push({ id, fecha: `${ym}-${String(dia).padStart(2, '0')}`, tipo: r.tipo, categoria: r.categoria, descripcion: r.descripcion, monto: r.monto, formaPago: r.formaPago, notas: 'Gasto fijo automático' });
+  const hoy = hoyISO();
+  d.recurrentes.filter((r) => r.activo && r.automatico !== false && r.monto > 0).forEach((r) => {
+    ocurrencias(r, ym).forEach((o) => {
+      if (o.fecha > hoy || d.movimientos.some((m) => m.id === o.id)) return;
+      d.movimientos.push({ id: o.id, fecha: o.fecha, tipo: r.tipo, categoria: r.categoria, subcategoria: '', descripcion: r.descripcion, monto: r.monto, formaPago: r.formaPago, notas: r.tipo === 'Ingreso' ? 'Ingreso fijo automático' : 'Gasto fijo automático' });
+    });
   });
 }
 
@@ -127,5 +151,28 @@ function sembrar() {
     });
     agregar({ fecha: fecha(16), tipo: 'Gasto', categoria: 'Ahorro e inversión', descripcion: 'Cetes', monto: 2500, formaPago: 'Transferencia' });
   }
-  return { categorias, formasPago, recurrentes, metas, movimientos, urlHoja: '' };
+  return { categorias, formasPago, metas, urlHoja: '', ...sembrarV2({ movimientos, recurrentes }) };
+}
+
+/** Tarjetas, deudas, patrimonio y preferencias de ejemplo. */
+function sembrarV2(d) {
+  const hace = (n) => moverMes(mesActual(), -n);
+  const historialPatrimonio = [3, 2, 1].map((n, i) => ({ mes: hace(n), activos: 168000 + i * 6500, pasivos: 64000 - i * 3800, neto: 104000 + i * 10300 }));
+  return {
+    version: 2,
+    recurrentes: (d.recurrentes || []).map((r) => ({ frecuencia: 'Mensual', mes: 1, automatico: true, ...r })),
+    tarjetas: [{ id: 't1', nombre: 'BBVA Azul', banco: 'BBVA', formaPago: 'Tarjeta de crédito', limite: 40000, saldo: 6200, fechaSaldo: `${hace(1)}-20`, diaCorte: 20, diaPago: 10 }],
+    deudas: [{ id: 'd1', nombre: 'Crédito automotriz', acreedor: 'Banorte', saldo: 58000, fechaSaldo: `${hace(2)}-01`, pagoMensual: 4200, tasa: 13.5, diaPago: 12, fechaFin: `${new Date().getFullYear() + 1}-12-12` }],
+    activos: [
+      { id: 'a1', nombre: 'Cuenta de nómina', tipo: 'Cuenta bancaria', valor: 24500, fecha: hoyISO() },
+      { id: 'a2', nombre: 'Cetes', tipo: 'Inversión', valor: 38000, fecha: hoyISO() },
+      { id: 'a3', nombre: 'Auto', tipo: 'Vehículo', valor: 125000, fecha: hoyISO() },
+    ],
+    historialPatrimonio,
+    preferencias: [{ clave: 'moneda', valor: 'MXN' }],
+    movimientos: (d.movimientos || []).concat(
+      [2, 1].map((n) => ({ id: `DE-d1-ej${n}`, fecha: `${hace(n - 1)}-12` <= hoyISO() ? `${hace(n - 1)}-12` : `${hace(n)}-12`, tipo: 'Gasto', categoria: 'Deudas y tarjetas', subcategoria: '', descripcion: 'Abono Crédito automotriz', monto: 4200, formaPago: 'Transferencia', notas: '' })),
+      [{ id: 'TJ-t1-ej1', fecha: `${hace(0)}-10` <= hoyISO() ? `${hace(0)}-10` : `${hace(1)}-10`, tipo: 'Transferencia', categoria: 'Pago de tarjeta', subcategoria: '', descripcion: 'Pago BBVA Azul', monto: 5000, formaPago: 'Transferencia', notas: '' }],
+    ),
+  };
 }

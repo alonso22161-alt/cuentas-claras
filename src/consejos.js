@@ -1,13 +1,14 @@
 // Recomendaciones por reglas: todo se calcula en tu dispositivo, sin costo y sin mandar tus datos a nadie.
 import { dinero0, pct, resumenMes, promedioPrevio, mesActual, diasDelMes, hoyISO, suma, etiquetaMes } from './utils.js';
+import { estadoDeuda, estadoTarjeta, extraordinarios, proyectar } from './finanzas.js';
 
 /** Devuelve una lista de { nivel: 'alerta' | 'idea' | 'bien', titulo, texto } para el mes indicado. */
 export function generarConsejos(datos, ym) {
-  const lista = [];
-  const r = resumenMes(datos, ym);
-  if (!r.movs.length) return lista;
-  const previo = promedioPrevio(datos, ym, 3);
   const esMesActual = ym === mesActual();
+  const lista = esMesActual ? consejosDeCredito(datos) : [];
+  const r = resumenMes(datos, ym);
+  if (!r.movs.length) return ordenar(lista);
+  const previo = promedioPrevio(datos, ym, 3);
   const dias = diasDelMes(ym);
   const avance = esMesActual ? Number(hoyISO().slice(8)) / dias : 1;
   const mes = etiquetaMes(ym);
@@ -121,6 +122,61 @@ export function generarConsejos(datos, ym) {
     lista.push({ nivel: 'idea', titulo: 'Empieza por un fondo de emergencia', texto: `Tres meses de tus gastos son cerca de ${dinero0(previo.consumo * 3)}. Créalo como meta y ve registrando lo que apartes.` });
   }
 
+  // 11. Gastos fuera de lo normal
+  const raros = extraordinarios(datos, ym);
+  if (raros.size) {
+    const total = suma(r.movs.filter((m) => raros.has(m.id)), (m) => m.monto);
+    lista.push({ nivel: 'idea', titulo: `${raros.size === 1 ? 'Un gasto extraordinario' : `${raros.size} gastos extraordinarios`} este mes`,
+      texto: `Suman ${dinero0(total)} y superan por mucho lo que sueles gastar en su categoría. Si fueron planeados, no hay problema; si no, considera crear una meta para imprevistos.` });
+  }
+
+  // 12. Capacidad de ahorro hacia adelante
+  if (esMesActual && (datos.recurrentes.length || previo.meses)) {
+    const siguiente = proyectar(datos, 1)[0];
+    if (siguiente.ingresos > 0 && siguiente.neto < 0) {
+      lista.push({ nivel: 'alerta', titulo: 'Tu proyección del próximo mes es negativa',
+        texto: `Con tus ingresos esperados (${dinero0(siguiente.ingresos)}), gastos fijos, gastos variables promedio y pagos de deudas, te faltarían ${dinero0(-siguiente.neto)}. Revisa Proyecciones para simular ajustes.` });
+    } else if (siguiente.ingresos > 0) {
+      lista.push({ nivel: siguiente.neto / siguiente.ingresos >= 0.2 ? 'bien' : 'idea', titulo: `Tu capacidad de ahorro estimada es de ${dinero0(siguiente.neto)} al mes`,
+        texto: `Equivale al ${pct(siguiente.neto / siguiente.ingresos)} de tus ingresos esperados. ${siguiente.neto / siguiente.ingresos >= 0.2 ? 'Vas bien: asígnale un destino en tus metas.' : 'La meta recomendable es apartar al menos el 20%.'}` });
+    }
+  }
+
+  return ordenar(lista);
+}
+
+function ordenar(lista) {
   const orden = { alerta: 0, idea: 1, bien: 2 };
   return lista.sort((a, b) => orden[a.nivel] - orden[b.nivel]);
+}
+
+/** Tarjetas y deudas: utilización, pagos próximos y tasas altas. */
+function consejosDeCredito(datos) {
+  const lista = [];
+  datos.tarjetas.forEach((t) => {
+    const e = estadoTarjeta(datos, t);
+    if (e.saldo > 0 && !e.pagadoEsteMes && e.diasParaPago <= 5) {
+      lista.push({ nivel: 'alerta', titulo: `Paga ${t.nombre} ${e.diasParaPago === 0 ? 'hoy' : e.diasParaPago === 1 ? 'mañana' : `en ${e.diasParaPago} días`}`,
+        texto: `Tu saldo es de ${dinero0(e.saldo)}. Pagar el total antes de la fecha límite evita intereses.` });
+    }
+    if (e.utilizacion >= 0.7) {
+      lista.push({ nivel: 'alerta', titulo: `${t.nombre} está al ${pct(e.utilizacion)} de su límite`,
+        texto: `Usar más del 30% del límite afecta tu historial crediticio. Te quedan ${dinero0(e.disponible)} disponibles; evita cargos nuevos hasta bajarla.` });
+    } else if (e.utilizacion >= 0.3) {
+      lista.push({ nivel: 'idea', titulo: `${t.nombre} usa ${pct(e.utilizacion)} de su límite`,
+        texto: 'Lo recomendable es mantenerla por debajo del 30%. Un pago antes de la fecha de corte ayuda a que el saldo reportado sea menor.' });
+    }
+  });
+  const conSaldo = datos.deudas.map((d) => ({ d, e: estadoDeuda(datos, d) })).filter((x) => x.e.saldo > 0);
+  conSaldo.forEach(({ d, e }) => {
+    if (!e.pagadoEsteMes && e.diasParaPago <= 5) {
+      lista.push({ nivel: 'alerta', titulo: `Abono de ${d.nombre} ${e.diasParaPago === 0 ? 'hoy' : `en ${e.diasParaPago} días`}`, texto: `El pago mensual es de ${dinero0(d.pagoMensual)}. Te quedan ${dinero0(e.saldo)} por pagar.` });
+    }
+  });
+  const cara = [...conSaldo].sort((a, b) => (Number(b.d.tasa) || 0) - (Number(a.d.tasa) || 0))[0];
+  if (conSaldo.length > 1 && cara && Number(cara.d.tasa) >= 20) {
+    lista.push({ nivel: 'idea', titulo: `Prioriza ${cara.d.nombre} (${cara.d.tasa}% anual)`,
+      texto: `Es tu deuda más cara: cada mes genera cerca de ${dinero0(cara.e.interesMes)} de interés. Paga el mínimo en las demás y dirige cualquier extra a esta.` });
+  }
+  return lista;
 }

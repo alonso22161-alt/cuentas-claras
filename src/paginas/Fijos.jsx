@@ -1,66 +1,105 @@
 import { useState } from 'react';
-import { Plus } from 'lucide-react';
+import { CalendarCheck, Clock, Plus, Repeat } from 'lucide-react';
 import { useDatos } from '../store.jsx';
-import { Boton, Campo, Encabezado, Hoja, Panel, Vacio, claseEntrada } from '../ui.jsx';
-import { dinero0, nuevoId, suma } from '../utils.js';
+import FormularioFijo, { movDeOcurrencia } from '../FormularioFijo.jsx';
+import { Boton, Etiqueta, Hoja, Indicador, Panel, Rejilla, Vacio, claseTabla, claseTd, claseTh } from '../ui.jsx';
+import { MESES, dinero0, etiquetaMes, suma } from '../utils.js';
+import { equivalenteMensual, estadoFijos, ocurrencias } from '../finanzas.js';
 
-const nuevo = (datos) => ({ id: '', descripcion: '', monto: '', tipo: 'Gasto', categoria: '', formaPago: datos.formasPago[0]?.nombre || '', dia: 1, activo: true });
+function cuando(f) {
+  if (f.frecuencia === 'Anual') return `${f.dia} de ${MESES[(Number(f.mes) || 1) - 1]}`;
+  if (f.frecuencia === 'Quincenal') { const otro = f.dia <= 15 ? f.dia + 15 : f.dia - 15; return `Días ${Math.min(f.dia, otro)} y ${Math.max(f.dia, otro)}`; }
+  if (f.frecuencia === 'Semanal') return `Cada 7 días desde el ${((f.dia - 1) % 7) + 1}`;
+  return `Día ${f.dia}`;
+}
 
-export default function Fijos() {
-  const { datos, guardarConfig, avisar } = useDatos();
-  const [f, setF] = useState(null);
-  const lista = datos.recurrentes;
-  const activos = lista.filter((x) => x.activo && x.tipo === 'Gasto');
-  const cats = f ? datos.categorias.filter((c) => c.tipo === f.tipo) : [];
+/** Tabla de fijos de un tipo con su estado en el mes: pagado/recibido o pendiente. */
+export function TablaFijos({ tipo, mes }) {
+  const { datos, guardarMov, guardarConfig } = useDatos();
+  const [editando, setEditando] = useState(null);
+  const ids = new Set(datos.movimientos.map((m) => m.id));
+  const lista = datos.recurrentes.filter((f) => f.tipo === tipo);
+  const hecho = tipo === 'Ingreso' ? 'Recibido' : 'Pagado';
 
-  function guardar() {
-    if (!f.descripcion.trim() || !(Number(f.monto) > 0) || !f.categoria) return avisar('Completa nombre, monto y categoría.');
-    const fila = { ...f, id: f.id || nuevoId(), descripcion: f.descripcion.trim(), monto: Number(f.monto), dia: Math.min(31, Math.max(1, Number(f.dia) || 1)) };
-    guardarConfig('recurrentes', f.id ? lista.map((x) => (x.id === f.id ? fila : x)) : [...lista, fila]);
-    setF(null);
-  }
-  const borrar = () => { guardarConfig('recurrentes', lista.filter((x) => x.id !== f.id)); setF(null); };
+  const filas = lista.map((f) => {
+    const oc = ocurrencias(f, mes).map((o) => ({ ...o, fijo: f, pagado: ids.has(o.id) }));
+    const pendientes = oc.filter((o) => !o.pagado);
+    let estado;
+    if (!f.activo) estado = <Etiqueta>Pausado</Etiqueta>;
+    else if (!oc.length) estado = <Etiqueta>No toca este mes</Etiqueta>;
+    else if (!pendientes.length) estado = <Etiqueta tono="ingreso">{hecho}</Etiqueta>;
+    else estado = <Etiqueta tono="aviso">Pendiente{oc.length > 1 ? ` ${oc.length - pendientes.length}/${oc.length}` : ''}</Etiqueta>;
+    return { f, oc, pendientes, estado };
+  });
+  const marcar = (o) => guardarMov(movDeOcurrencia(o), undefined, `${o.fijo.descripcion}: ${hecho.toLowerCase()}`);
+  const pausar = (f) => guardarConfig('recurrentes', datos.recurrentes.map((x) => (x.id === f.id ? { ...x, activo: !x.activo } : x)), f.activo ? 'Pausado' : 'Activado');
+
+  if (!lista.length) return <Vacio titulo={tipo === 'Ingreso' ? 'Sin ingresos esperados' : 'Sin gastos fijos'}>{tipo === 'Ingreso' ? 'Registra tu sueldo, comisiones u otros ingresos que recibes con regularidad.' : 'Agrega renta, servicios, seguros, suscripciones o colegiaturas.'}</Vacio>;
 
   return (
     <>
-      <Encabezado titulo="Gastos fijos"><Boton onClick={() => setF(nuevo(datos))}><Plus size={16} />Agregar</Boton></Encabezado>
-      <p className="text-sm text-suave mb-4 max-w-prose">Renta, servicios, suscripciones o tu sueldo. Se registran solos cada mes el día que indiques, la primera vez que abras la app ese día o después.</p>
-      {lista.length === 0 ? (
-        <Panel><Vacio titulo="Sin gastos fijos">Agrega lo que pagas cada mes para no capturarlo a mano.</Vacio></Panel>
-      ) : (
-        <Panel titulo={`${dinero0(suma(activos, (x) => x.monto))} al mes en gastos fijos`}>
-          <ul className="divide-y divide-linea -my-2">
-            {lista.map((x) => (
-              <li key={x.id}>
-                <button type="button" onClick={() => setF({ ...x })} className={`w-full flex items-center gap-3 py-3 text-left ${x.activo ? '' : 'opacity-50'}`}>
-                  <span className="cifra font-bold w-10 h-10 grid place-items-center rounded-xl bg-hundido shrink-0">{x.dia}</span>
-                  <span className="flex-1 min-w-0"><span className="block font-medium truncate">{x.descripcion}</span><span className="block text-sm text-suave truncate">{x.categoria}, {x.formaPago}{x.activo ? '' : ' (en pausa)'}</span></span>
-                  <span className="cifra font-bold" style={x.tipo === 'Ingreso' ? { color: 'var(--ingreso)' } : undefined}>{x.tipo === 'Ingreso' ? '+' : ''}{dinero0(x.monto)}</span>
-                </button>
-              </li>
+      <div className="hidden md:block overflow-x-auto">
+        <table className={claseTabla}>
+          <thead><tr>{['Concepto', 'Categoría', 'Frecuencia', 'Cuándo', 'Importe', 'Registro', `Estado en ${etiquetaMes(mes)}`, ''].map((h) => <th key={h} className={claseTh}>{h}</th>)}</tr></thead>
+          <tbody>
+            {filas.map(({ f, pendientes, estado }) => (
+              <tr key={f.id} className={f.activo ? '' : 'opacity-55'}>
+                <td className={claseTd}><b className="font-semibold">{f.descripcion}</b></td>
+                <td className={`${claseTd} text-suave`}>{f.categoria}</td>
+                <td className={claseTd}>{f.frecuencia}</td>
+                <td className={claseTd}>{cuando(f)}</td>
+                <td className={`${claseTd} cifra font-bold`}>{dinero0(f.monto)}{f.frecuencia !== 'Mensual' && <span className="block text-[10px] text-suave font-normal">{dinero0(equivalenteMensual(f))} al mes</span>}</td>
+                <td className={`${claseTd} text-suave`}>{f.automatico ? 'Automático' : 'Manual'}</td>
+                <td className={claseTd}>{estado}</td>
+                <td className={`${claseTd} text-right space-x-1`}>
+                  {f.activo && pendientes.length > 0 && <Boton tam="sm" variante="secundario" onClick={() => marcar(pendientes[0])}>Marcar {hecho.toLowerCase()}</Boton>}
+                  <Boton tam="sm" variante="texto" onClick={() => pausar(f)}>{f.activo ? 'Pausar' : 'Activar'}</Boton>
+                  <Boton tam="sm" variante="texto" onClick={() => setEditando(f)}>Editar</Boton>
+                </td>
+              </tr>
             ))}
-          </ul>
-        </Panel>
-      )}
-
-      {f && (
-        <Hoja titulo={f.id ? 'Editar gasto fijo' : 'Nuevo gasto fijo'} onCerrar={() => setF(null)}>
-          <div className="space-y-3">
-            <Campo etiqueta="Nombre"><input value={f.descripcion} onChange={(e) => setF({ ...f, descripcion: e.target.value })} placeholder="Ej. Renta" className={claseEntrada} /></Campo>
-            <div className="grid grid-cols-2 gap-3">
-              <Campo etiqueta="Monto"><input inputMode="decimal" value={f.monto} onChange={(e) => setF({ ...f, monto: e.target.value.replace(/[^0-9.]/g, '') })} className={claseEntrada} /></Campo>
-              <Campo etiqueta="Día del mes"><input inputMode="numeric" value={f.dia} onChange={(e) => setF({ ...f, dia: e.target.value.replace(/\D/g, '').slice(0, 2) })} className={claseEntrada} /></Campo>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <Campo etiqueta="Tipo"><select value={f.tipo} onChange={(e) => setF({ ...f, tipo: e.target.value, categoria: '' })} className={claseEntrada}><option>Gasto</option><option>Ingreso</option></select></Campo>
-              <Campo etiqueta="Forma de pago"><select value={f.formaPago} onChange={(e) => setF({ ...f, formaPago: e.target.value })} className={claseEntrada}>{datos.formasPago.map((p) => <option key={p.nombre}>{p.nombre}</option>)}</select></Campo>
-            </div>
-            <Campo etiqueta="Categoría"><select value={f.categoria} onChange={(e) => setF({ ...f, categoria: e.target.value })} className={claseEntrada}><option value="">Elige una</option>{cats.map((c) => <option key={c.nombre}>{c.nombre}</option>)}</select></Campo>
-            <label className="flex items-center gap-2 text-sm py-1"><input type="checkbox" checked={f.activo} onChange={(e) => setF({ ...f, activo: e.target.checked })} className="h-4 w-4 accent-[var(--marca)]" />Activo (desmárcalo para pausarlo sin borrarlo)</label>
-            <div className="flex gap-2 pt-1">{f.id && <Boton variante="peligro" onClick={borrar}>Borrar</Boton>}<Boton className="flex-1" onClick={guardar}>Guardar gasto fijo</Boton></div>
-          </div>
-        </Hoja>
-      )}
+          </tbody>
+        </table>
+      </div>
+      <ul className="md:hidden divide-y divide-linea -my-1">
+        {filas.map(({ f, pendientes, estado }) => (
+          <li key={f.id} className={`py-3 ${f.activo ? '' : 'opacity-55'}`}>
+            <button type="button" onClick={() => setEditando(f)} className="w-full flex items-start gap-3 text-left">
+              <span className="h-10 w-10 rounded-[10px] grid place-items-center bg-hundido shrink-0 text-xs font-bold cifra">{f.dia}</span>
+              <span className="flex-1 min-w-0"><span className="block font-semibold text-sm truncate">{f.descripcion}</span><span className="block text-xs text-suave truncate">{f.frecuencia} · {cuando(f)} · {f.automatico ? 'Automático' : 'Manual'}</span><span className="block mt-1">{estado}</span></span>
+              <span className="cifra font-bold text-sm">{dinero0(f.monto)}</span>
+            </button>
+            {f.activo && pendientes.length > 0 && <div className="mt-2 pl-[52px]"><Boton tam="sm" variante="secundario" onClick={() => marcar(pendientes[0])}>Marcar {hecho.toLowerCase()}</Boton></div>}
+          </li>
+        ))}
+      </ul>
+      {editando && <Hoja titulo="Editar" onCerrar={() => setEditando(null)}><FormularioFijo fijo={editando} onListo={() => setEditando(null)} /></Hoja>}
     </>
+  );
+}
+
+export default function Fijos({ mes }) {
+  const { datos } = useDatos();
+  const [nuevo, setNuevo] = useState(false);
+  const activos = datos.recurrentes.filter((f) => f.activo && f.tipo === 'Gasto');
+  const oc = estadoFijos(datos, mes);
+  const pagado = suma(oc.filter((o) => o.pagado), (o) => o.fijo.monto);
+  const total = suma(oc, (o) => o.fijo.monto);
+
+  return (
+    <div className="space-y-4">
+      <Rejilla className="grid-cols-2 xl:grid-cols-4">
+        <Indicador etiqueta="Compromiso mensual" valor={dinero0(suma(activos, equivalenteMensual))} Icono={Repeat} nota={`${activos.length} gastos fijos activos`} />
+        <Indicador etiqueta={`Programado en ${etiquetaMes(mes)}`} valor={dinero0(total)} Icono={CalendarCheck} nota={`${oc.length} pagos en el mes`} />
+        <Indicador etiqueta="Pagado" valor={dinero0(pagado)} tono="ingreso" nota={`${oc.filter((o) => o.pagado).length} de ${oc.length} pagos`} />
+        <Indicador etiqueta="Pendiente" valor={dinero0(total - pagado)} tono={total - pagado > 0 ? 'gasto' : undefined} Icono={Clock} nota="Por cubrir este mes" />
+      </Rejilla>
+      <Panel titulo="Gastos fijos y recurrentes" subtitulo="Renta, servicios, seguros, suscripciones, colegiaturas y otros compromisos"
+        accion={<Boton onClick={() => setNuevo(true)}><Plus size={15} />Nuevo gasto fijo</Boton>}>
+        <TablaFijos tipo="Gasto" mes={mes} />
+        <p className="text-[11px] text-suave mt-4">Los automáticos se registran solos el día que toca. Los manuales son planeación: no se descuentan del balance hasta que los marques como pagados. Ambos aparecen en el calendario y en las proyecciones.</p>
+      </Panel>
+      {nuevo && <Hoja titulo="Nuevo gasto fijo" onCerrar={() => setNuevo(false)}><FormularioFijo tipo="Gasto" onListo={() => setNuevo(false)} /></Hoja>}
+    </div>
   );
 }

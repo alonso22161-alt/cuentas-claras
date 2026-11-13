@@ -1,3 +1,8 @@
 node_modules
 dist
 .DS_Store
+
+# Notas personales con claves: nunca subirlas (el repositorio es público)
+apps-script/*.txt
+*clave*
+*Clave*

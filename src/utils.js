@@ -26,15 +26,23 @@ export function etiquetaDia(fecha) {
   return `${DIAS[f.getDay()]} ${d} de ${MESES_LARGOS[m - 1]}`;
 }
 
-const fmt = new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' });
-const fmt0 = new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 });
+// La moneda se elige en Configuración; ponerMoneda() se llama al cargar los datos.
+let fmt, fmt0;
+export function ponerMoneda(moneda = 'MXN') {
+  try {
+    fmt = new Intl.NumberFormat('es-MX', { style: 'currency', currency: moneda });
+    fmt0 = new Intl.NumberFormat('es-MX', { style: 'currency', currency: moneda, maximumFractionDigits: 0 });
+  } catch { ponerMoneda('MXN'); }
+}
+ponerMoneda();
 export const dinero = (n) => fmt.format(n || 0);
 export const dinero0 = (n) => fmt0.format(n || 0);
+export const MONEDAS = [['MXN', 'Peso mexicano (MXN)'], ['USD', 'Dólar estadounidense (USD)'], ['EUR', 'Euro (EUR)']];
 export const pct = (n) => `${Math.round((n || 0) * 100)}%`;
 export const nuevoId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 export const suma = (lista, f = (x) => x) => lista.reduce((t, x) => t + (Number(f(x)) || 0), 0);
 
-export const PALETA = ['#0F766E', '#B3264E', '#C98A1B', '#3B6FB6', '#7A4EA3', '#2E9D6A', '#D2603A', '#5A6B7B', '#A3327C', '#4C9AA8', '#8A7A2E', '#6C5CE7', '#C0507A', '#3E8E41'];
+export const PALETA = ['#C94F5B', '#3B6FB6', '#159A72', '#C98A1B', '#7A5BA8', '#D2703A', '#4C9AA8', '#A3427C', '#5A6B7B', '#8A7A2E', '#2E7D8C', '#B85C8A', '#6B8E3E', '#E08A6E'];
 export function colorDe(nombre, categorias) {
   const i = categorias.findIndex((c) => c.nombre === nombre);
   return PALETA[(i < 0 ? PALETA.length - 1 : i) % PALETA.length];
@@ -117,12 +125,12 @@ export function sugerirCategoria(descripcion, tipo, datos) {
 
 export function descargarCSV(movimientos) {
   const esc = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
-  const filas = [['Fecha', 'Tipo', 'Categoría', 'Descripción', 'Monto', 'Forma de pago', 'Notas']]
-    .concat([...movimientos].sort((a, b) => (a.fecha < b.fecha ? -1 : 1)).map((m) => [m.fecha, m.tipo, m.categoria, m.descripcion, m.monto, m.formaPago, m.notas]));
+  const filas = [['Fecha', 'Tipo', 'Categoría', 'Subcategoría', 'Descripción', 'Monto', 'Forma de pago', 'Notas']]
+    .concat([...movimientos].sort((a, b) => (a.fecha < b.fecha ? -1 : 1)).map((m) => [m.fecha, m.tipo, m.categoria, m.subcategoria, m.descripcion, m.monto, m.formaPago, m.notas]));
   const blob = new Blob(['\ufeff' + filas.map((f) => f.map(esc).join(',')).join('\n')], { type: 'text/csv;charset=utf-8' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = `cuentas-claras-${hoyISO()}.csv`;
+  a.download = `micontrol-${hoyISO()}.csv`;
   a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 2000);
 }
